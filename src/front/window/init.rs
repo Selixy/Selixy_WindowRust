@@ -8,7 +8,7 @@ use winapi::um::libloaderapi::GetModuleHandleW;
 use std::ptr::{null_mut, NonNull};
 use std::mem;
 use crate::front::window::info;
-use crate::front::window::event::massages;
+use crate::front::window::event::messages;
 use crate::front::window::utils;
 use crate::front::window::register::{save_window_rect, load_window_rect};
 use winapi::um::dwmapi::DwmSetWindowAttribute;
@@ -51,7 +51,7 @@ pub fn create() {
 
         let wc = WNDCLASSW {
             style: CS_HREDRAW | CS_VREDRAW,
-            lpfnWndProc: Some(massages::wnd_proc),
+            lpfnWndProc: Some(messages::wnd_proc),
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: h_instance,

@@ -2,16 +2,19 @@ use winapi::shared::windef::{HWND, RECT};
 use winapi::um::winuser::{WINDOWPLACEMENT, GetWindowPlacement, GetWindowRect};
 use std::mem;
 
+
 // Variables globales pour l'état de la fenêtre
 static mut IS_MAXIMIZED:     bool = false;
 static mut IS_MINIMIZED:     bool = false;
 static mut IS_ACTIVE:        bool = true;
 static mut LAST_WINDOW_RECT: RECT = RECT { left: 0, top: 0, right: 0, bottom: 0 };
 
-// Constantes pour la gestion des bordures et de la barre de titre
+// Constantes pour les dimentions des elements de la fenêtre
 const BORDER_WIDTH:     i32 = 10; // Largeur des bordures de la fenêtre
-const TITLE_BAR_HEIGHT: i32 = 35; // Hauteur de la barre de titre
 const BUTTON_WIDTH:     i32 = 47; // Largeur des boutons de la fenêtre
+
+const TITLE_BAR_HEIGHT: i32 = 35; // Hauteur de la barre de titre
+const INFO_BAR_HEIGHT:  i32 = 45; // Hauteur de la barre d'information
 
 // Constantes pour l'attribut de coins arrondis
 const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
@@ -22,6 +25,12 @@ const MIN_WINDOW_WIDTH:  i32   = 600;
 const MIN_WINDOW_HEIGHT: i32   = 500;
 const TIMER_ID:          usize = 1;
 const TIMER_INTERVAL:    u32   = 4;
+
+
+/// Retourne la hauteur de la barre d'information
+pub fn get_info_bar_height() -> i32 {
+    INFO_BAR_HEIGHT
+}
 
 /// Retourne la largeur de la bordure
 pub fn get_border_width() -> i32 {

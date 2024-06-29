@@ -5,7 +5,7 @@ use winapi::shared::windef::{HDC, RECT};
 use winapi::um::wingdi::{CreateSolidBrush, RGB, DeleteObject, SelectObject, SetTextColor, SetBkMode, CreateFontW, TextOutW, CreateCompatibleDC, CreateCompatibleBitmap, BitBlt, SRCCOPY};
 use winapi::um::winuser::{FillRect, GetDC, ReleaseDC};
 use widestring::U16CString;
-use crate::front::window::info;
+use crate::front::window::info::{self, get_is_active};
 use crate::front::color::theme::{get_theme_colors, ThemeColors};
 use crate::str::vectors::Rgb;
 use crate::front::window::responsive::get_window_width;
@@ -157,10 +157,15 @@ fn draw_three_icones(hdc: HDC, theme_colors: &ThemeColors) {
         } else {
             MAXIM_ICON
         };
-
-        draw_icon(hdc, EXIT_FACT, exit_position, EXIT_ICON, theme_colors);
-        draw_icon(hdc, MAXIM_FACT, maxim_position, max_rest, theme_colors);
-        draw_icon(hdc, MINIM_FACT, minim_position, MINIM_ICON, theme_colors);
+        if get_is_active() {
+            draw_icon(hdc, EXIT_FACT  + 0.8, exit_position, EXIT_ICON, theme_colors);
+            draw_icon(hdc, MAXIM_FACT + 0.8, maxim_position, max_rest, theme_colors);
+            draw_icon(hdc, MINIM_FACT + 0.8, minim_position, MINIM_ICON, theme_colors);
+        } else {
+            draw_icon(hdc, EXIT_FACT, exit_position, EXIT_ICON, theme_colors);
+            draw_icon(hdc, MAXIM_FACT, maxim_position, max_rest, theme_colors);
+            draw_icon(hdc, MINIM_FACT, minim_position, MINIM_ICON, theme_colors);
+        }
     }
 }
 

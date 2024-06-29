@@ -2,8 +2,10 @@ use crate::str::vectors::Rgb;
 
 // Structure pour stocker les couleurs du thème
 pub struct ThemeColors {
-    pub background:        Rgb, // Couleur de fond
-    pub button_icon:       Rgb, // Couleur de texte des boutons
+    pub background:          Rgb, // Couleur de fond
+    pub background_column:   Rgb, // Couleur de fond des colonnes
+    pub background_info_bar: Rgb, // Couleur de fond 
+    pub button_icon:         Rgb, // Couleur de texte des boutons
     pub button_iconselect: Rgb, // Couleur de texte des boutons sélectionnés
 }
 
@@ -12,15 +14,19 @@ static mut CURRENT_THEME: Option<ThemeColors> = None;
 
 // Constantes pour les couleurs du thème sombre et clair
 pub const DARK_THEME: ThemeColors = ThemeColors {
-    background:        Rgb(  18,  18,  18),
-    button_icon:       Rgb( 128, 128, 128),
-    button_iconselect: Rgb( 255, 255, 255),
+    background:           Rgb(  18,  18,  18),
+    background_column:    Rgb(  32,  32,  32),
+    background_info_bar:  Rgb(  32,  32,  32),
+    button_icon:          Rgb( 128, 128, 128),
+    button_iconselect:    Rgb( 255, 255, 255),
 };
 
 pub const LIGHT_THEME: ThemeColors = ThemeColors {
-    background:        Rgb( 255, 255, 255),
-    button_icon:       Rgb( 150, 150, 150),
-    button_iconselect: Rgb(  32,  32,  32),
+    background:          Rgb( 255, 255, 255),
+    background_column:   Rgb( 240, 240, 240),
+    background_info_bar: Rgb( 240, 240, 240),
+    button_icon:         Rgb( 150, 150, 150),
+    button_iconselect:   Rgb(  32,  32,  32),
 };
 
 /// Initialise le thème basé sur le mode sombre ou clair.

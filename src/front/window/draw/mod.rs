@@ -1,3 +1,5 @@
 pub mod draw;
-pub mod background;
 pub mod winbuttons;
+pub mod objects;
+pub mod animation;
+pub mod draw_zones;
