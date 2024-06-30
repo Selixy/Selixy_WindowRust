@@ -21,7 +21,7 @@ const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
 const DWMWCP_ROUND:                   u32 = 2;
 
 // Constantes pour les tailles minimales de la fenêtre
-const MIN_WINDOW_WIDTH:  i32   = 600;
+const MIN_WINDOW_WIDTH:  i32   = 680;
 const MIN_WINDOW_HEIGHT: i32   = 500;
 const TIMER_ID:          usize = 1;
 const TIMER_INTERVAL:    u32   = 4;

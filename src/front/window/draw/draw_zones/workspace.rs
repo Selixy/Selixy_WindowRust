@@ -1,6 +1,5 @@
 extern crate winapi;
-use winapi::shared::windef::HDC;
-use winapi::shared::windef::RECT;
+use winapi::shared::windef::{HDC, RECT};
 use winapi::um::wingdi::{CreateSolidBrush, RGB, DeleteObject};
 use winapi::um::winuser::FillRect;
 use crate::front::window::draw::objects::workspace::column_properties::ColumnProperties;
@@ -20,22 +19,12 @@ impl Workspace {
         // Calcule les points d'ancrage de la zone de travail
         let (top_left, top_right, bottom_left, bottom_right, _center) = get_workspace_anchors();
 
-        // Obtenir les couleurs du thème actuel
-        let theme_colors = get_theme_colors();
-
-        // Utilisation des points d'ancrage pour définir les colonnes
         let columns = vec![
-            ColumnProperties::new(
-                top_right[0].0 - 100, top_right[0].1, top_right[0].0, bottom_right[0].1,
-                theme_colors.background_column, // Utilisation de la couleur de fond des colonnes
-            ),
+            ColumnProperties::create_from_anchors(top_right[0], bottom_right[0]), // Exemple de colonne
         ];
 
         let outlines = vec![
-            ColumnOutline::new(
-                top_left[0].0, top_left[0].1, top_left[0].0 + 100, bottom_left[0].1,
-                theme_colors.background_column, // Utilisation de la couleur de fond des colonnes
-            ),
+            ColumnOutline::create_from_anchors(top_left[0], bottom_left[0]), // Exemple de contour
         ];
 
         Workspace { columns, outlines }

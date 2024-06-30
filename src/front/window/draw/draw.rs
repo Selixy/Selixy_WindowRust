@@ -2,7 +2,7 @@ extern crate winapi;
 extern crate widestring;
 
 use winapi::shared::windef::{HDC, RECT};
-use crate::front::window::draw::winbuttons;
+use crate::front::window::draw::objects::title_bar::winbuttons;
 use crate::front::window::draw::draw_zones::{title_bar::TitleBar, info_bar::InfoBar, workspace::Workspace};
 
 /// Fonction principale de dessin

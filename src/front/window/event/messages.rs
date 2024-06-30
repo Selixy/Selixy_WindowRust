@@ -12,7 +12,7 @@ use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 use std::thread;
 use std::time::Duration;
 
-use crate::front::window::draw::winbuttons;
+use crate::front::window::draw::objects::title_bar::winbuttons;
 use crate::front::window::utils;
 use crate::front::window::register;
 use crate::front::window::responsive;

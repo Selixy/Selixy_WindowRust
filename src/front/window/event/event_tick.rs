@@ -1,4 +1,4 @@
-use crate::front::window::draw::winbuttons;
+use crate::front::window::draw::objects::title_bar::winbuttons;
 
 /// Boucle d'événements.
 pub fn event_loop() {

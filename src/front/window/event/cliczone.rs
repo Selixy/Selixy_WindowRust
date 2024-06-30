@@ -5,7 +5,7 @@ use winapi::shared::minwindef::{LPARAM, LRESULT}; // Importation des types LPARA
 use winapi::um::winuser::*; // Importation des fonctions et constantes utilisateur de winapi
 use std::mem; // Importation du module mem pour gérer les structures mémoire
 
-use crate::front::window::draw::winbuttons; // Importation du module buttons
+use crate::front::window::draw::objects::title_bar::winbuttons; // Importation du module buttons
 use crate::front::window::info; // Importation du module info
 
 
