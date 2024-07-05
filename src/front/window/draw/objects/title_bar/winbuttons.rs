@@ -9,7 +9,7 @@ use crate::front::window::info::{self, get_is_active};
 use crate::front::color::theme::{get_theme_colors, ThemeColors};
 use crate::str::vectors::Rgb;
 use crate::front::window::responsive::get_window_width;
-use crate::front::window::create::get_main_window_handle;
+use crate::front::window::create::get_window_handles;
 
 // Déclaration des variables statiques pour les facteurs de survol des boutons
 static mut EXIT_FACT : f32 = 0.0;
@@ -201,78 +201,80 @@ fn draw_three_buttons(hdc: HDC, theme_colors: &ThemeColors) {
 
 /// Gère les boutons de la fenêtre.
 pub fn windows_buttons() {
-    if let Some(hwnd) = get_main_window_handle() {
-        let hdc = unsafe { GetDC(hwnd) };
-        if hdc.is_null() {
-            return;
-        }
+    if let handles  = get_window_handles() {
+        for hwnd in handles {
+            let hdc = unsafe { GetDC(hwnd) };
+            if hdc.is_null() {
+                return;
+            }
 
-        // Créer un DC compatible en mémoire
-        let mem_dc = unsafe { CreateCompatibleDC(hdc) };
-        if mem_dc.is_null() {
-            unsafe { ReleaseDC(hwnd, hdc) };
-            return;
-        }
+            // Créer un DC compatible en mémoire
+            let mem_dc = unsafe { CreateCompatibleDC(hdc) };
+            if mem_dc.is_null() {
+                unsafe { ReleaseDC(hwnd, hdc) };
+                return;
+            }
 
-        // Créer un bitmap compatible en mémoire
-        let window_width = get_window_width();
-        let title_bar_height = info::get_title_bar_height();
-        let button_width = info::get_button_width();
-        let mem_bitmap = unsafe { CreateCompatibleBitmap(hdc, window_width, title_bar_height) };
-        if mem_bitmap.is_null() {
+            // Créer un bitmap compatible en mémoire
+            let window_width = get_window_width();
+            let title_bar_height = info::get_title_bar_height();
+            let button_width = info::get_button_width();
+            let mem_bitmap = unsafe { CreateCompatibleBitmap(hdc, window_width, title_bar_height) };
+            if mem_bitmap.is_null() {
+                unsafe {
+                    DeleteObject(mem_dc as _);
+                    ReleaseDC(hwnd, hdc);
+                }
+                return;
+            }
+
+            // Sélectionner le bitmap dans le DC compatible
+            unsafe { SelectObject(mem_dc, mem_bitmap as _) };
+
+            // Dessiner les boutons et les icônes sur le DC compatible
+            let theme_colors = get_theme_colors();
+            draw_three_buttons(mem_dc, &theme_colors);
+
+            // Transférer le contenu du DC compatible à l'écran
             unsafe {
+                BitBlt(hdc, window_width - button_width * 3, 0, button_width * 3, title_bar_height, mem_dc, window_width - button_width * 3, 0, SRCCOPY);
+                DeleteObject(mem_bitmap as _);
                 DeleteObject(mem_dc as _);
                 ReleaseDC(hwnd, hdc);
             }
-            return;
         }
 
-        // Sélectionner le bitmap dans le DC compatible
-        unsafe { SelectObject(mem_dc, mem_bitmap as _) };
-
-        // Dessiner les boutons et les icônes sur le DC compatible
-        let theme_colors = get_theme_colors();
-        draw_three_buttons(mem_dc, &theme_colors);
-
-        // Transférer le contenu du DC compatible à l'écran
         unsafe {
-            BitBlt(hdc, window_width - button_width * 3, 0, button_width * 3, title_bar_height, mem_dc, window_width - button_width * 3, 0, SRCCOPY);
-            DeleteObject(mem_bitmap as _);
-            DeleteObject(mem_dc as _);
-            ReleaseDC(hwnd, hdc);
-        }
-    }
+            let mut spid = 0.128;
+            if info::get_is_active() {
+                spid = 0.032;
+            }
 
-    unsafe {
-        let mut spid = 0.128;
-        if info::get_is_active() {
-            spid = 0.032;
-        }
+            if EXIT_OVER {
+                STOP = false;
+                MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
+                MINIM_FACT = (MINIM_FACT - spid).max(0.0);
+                EXIT_FACT  = (EXIT_FACT  + spid).min(1.0);
+            } else if MAXIM_OVER {
+                STOP = false;
+                MINIM_FACT = (MINIM_FACT - spid).max(0.0);
+                EXIT_FACT  = (EXIT_FACT  - spid).max(0.0);
+                MAXIM_FACT = (MAXIM_FACT + spid).min(1.0);
+            } else if MINIM_OVER {
+                STOP = false;
+                EXIT_FACT  = (EXIT_FACT  - spid).max(0.0);
+                MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
+                MINIM_FACT = (MINIM_FACT + spid).min(1.0);
+            } else {
+                EXIT_FACT  = (EXIT_FACT  - spid).max(0.0);
+                MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
+                MINIM_FACT = (MINIM_FACT - spid).max(0.0);
+            }
 
-        if EXIT_OVER {
-            STOP = false;
-            MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
-            MINIM_FACT = (MINIM_FACT - spid).max(0.0);
-            EXIT_FACT  = (EXIT_FACT  + spid).min(1.0);
-        } else if MAXIM_OVER {
-            STOP = false;
-            MINIM_FACT = (MINIM_FACT - spid).max(0.0);
-            EXIT_FACT  = (EXIT_FACT  - spid).max(0.0);
-            MAXIM_FACT = (MAXIM_FACT + spid).min(1.0);
-        } else if MINIM_OVER {
-            STOP = false;
-            EXIT_FACT  = (EXIT_FACT  - spid).max(0.0);
-            MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
-            MINIM_FACT = (MINIM_FACT + spid).min(1.0);
-        } else {
-            EXIT_FACT  = (EXIT_FACT  - spid).max(0.0);
-            MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
-            MINIM_FACT = (MINIM_FACT - spid).max(0.0);
-        }
-
-        if !STOP {
-            if MINIM_FACT + MAXIM_FACT + EXIT_FACT <= 0.0 {
-                STOP = true;
+            if !STOP {
+                if MINIM_FACT + MAXIM_FACT + EXIT_FACT <= 0.0 {
+                    STOP = true;
+                }
             }
         }
     }
