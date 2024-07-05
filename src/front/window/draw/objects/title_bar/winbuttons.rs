@@ -9,7 +9,7 @@ use crate::front::window::info::{self, get_is_active};
 use crate::front::color::theme::{get_theme_colors, ThemeColors};
 use crate::str::vectors::Rgb;
 use crate::front::window::responsive::get_window_width;
-use crate::front::window::init::get_main_window_handle;
+use crate::front::window::create::get_main_window_handle;
 
 // Déclaration des variables statiques pour les facteurs de survol des boutons
 static mut EXIT_FACT : f32 = 0.0;

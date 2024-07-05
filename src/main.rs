@@ -3,5 +3,5 @@ mod front;
 
 fn main() {
     // Initialiser la fenêtre
-    front::window::init::create();
+    front::window::create::create_window();
 }
