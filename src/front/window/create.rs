@@ -1,55 +1,61 @@
 extern crate winapi;
 extern crate lazy_static;
 
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::collections::HashMap;
+use std::sync::Mutex;
+use lazy_static::lazy_static;
 use winapi::shared::windef::{HBRUSH, HWND};
-use winapi::um::winuser::*;
 use winapi::um::libloaderapi::GetModuleHandleW;
+use winapi::um::winuser::*;
+use winapi::um::dwmapi::DwmSetWindowAttribute;
+use winapi::um::winnt::HRESULT;
 use std::ptr::null_mut;
 use std::mem;
 use crate::front::window::info;
 use crate::front::window::event::messages;
 use crate::front::window::utils;
 use crate::front::window::register::{save_window_rect, load_window_rect};
-use winapi::um::dwmapi::DwmSetWindowAttribute;
-use winapi::um::winnt::HRESULT;
 
-// Déclaration d'une variable globale pour stocker les handles des fenêtres
-lazy_static::lazy_static! {
-    static ref MAIN_WINDOW_HANDLES: AtomicPtr<Vec<HWND>> = AtomicPtr::new(Box::into_raw(Box::new(Vec::new())));
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+struct WindowHandle(HWND);
+
+unsafe impl Send for WindowHandle {}
+
+lazy_static! {
+    static ref WINDOWS: Mutex<HashMap<WindowHandle, WindowProperties>> = Mutex::new(HashMap::new());
+}
+
+struct WindowProperties {
+    // Ajouter les propriétés spécifiques à chaque fenêtre ici
 }
 
 /// Applique la préférence des coins arrondis à une fenêtre
 fn apply_window_corner_preference(hwnd: HWND) -> HRESULT {
     let preference: u32 = info::get_dwmwcp_rond();
-    unsafe { 
+    unsafe {
         DwmSetWindowAttribute(
-            hwnd, 
-            info::get_dwmwa_window_corner_preference(), 
-            &preference as *const u32 as *const _, 
-            std::mem::size_of::<u32>() as u32
+            hwnd,
+            info::get_dwmwa_window_corner_preference(),
+            &preference as *const u32 as *const _,
+            std::mem::size_of::<u32>() as u32,
         )
     }
 }
 
-/// Ajoute un nouveau handle de fenêtre à la liste des handles
-pub fn add_window_handle(hwnd: HWND) {
-    unsafe {
-        let handles = &mut *MAIN_WINDOW_HANDLES.load(Ordering::SeqCst);
-        handles.push(hwnd);
-    }
+/// Définit le handle de la fenêtre principale
+pub fn set_main_window_handle(hwnd: HWND) {
+    let mut windows = WINDOWS.lock().unwrap();
+    windows.insert(WindowHandle(hwnd), WindowProperties { /* initialisation des propriétés */ });
 }
 
-/// Obtient tous les handles des fenêtres
-pub fn get_window_handles() -> Vec<HWND> {
-    unsafe {
-        let handles = &*MAIN_WINDOW_HANDLES.load(Ordering::SeqCst);
-        handles.clone()
-    }
+/// Obtient le handle de la fenêtre principale
+pub fn get_main_window_handle() -> Option<HWND> {
+    let windows = WINDOWS.lock().unwrap();
+    windows.keys().next().map(|wh| wh.0)
 }
 
-/// Crée une nouvelle fenêtre
-pub fn create_window() {
+/// Crée une nouvelle fenêtre et l'ajoute au stockage global
+pub fn create_window() -> HWND {
     unsafe {
         let h_instance = GetModuleHandleW(null_mut());
         let class_name = utils::to_wstring("window");
@@ -86,7 +92,7 @@ pub fn create_window() {
             null_mut(),
         );
 
-        add_window_handle(hwnd);
+        set_main_window_handle(hwnd);
         apply_window_corner_preference(hwnd);
 
         if is_maximized {
@@ -94,12 +100,26 @@ pub fn create_window() {
             info::set_is_maximized(true);
         }
 
-        let mut msg: MSG = mem::zeroed();
-        while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
+        hwnd
+    }
+}
 
+/// Gère les événements pour toutes les fenêtres
+pub fn handle_events() {
+    let mut msg: MSG = unsafe { mem::zeroed() };
+    while unsafe { GetMessageW(&mut msg, null_mut(), 0, 0) } > 0 {
+        unsafe {
+            TranslateMessage(&mut msg);
+            DispatchMessageW(&mut msg);
+        }
+    }
+    unsafe {
         save_window_rect();
     }
+}
+
+/// Retourne une liste de tous les handles de fenêtre
+pub fn get_window_handles() -> Vec<HWND> {
+    let windows = WINDOWS.lock().unwrap();
+    windows.keys().map(|wh| wh.0).collect()
 }
