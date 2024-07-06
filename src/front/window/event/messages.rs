@@ -23,6 +23,23 @@ use crate::front::color::theme::init_theme;
 use crate::front::window::event::event_tick;
 use crate::front::window::info;
 
+use winapi::um::dwmapi::DwmSetWindowAttribute;
+
+const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+const DWMWCP_ROUND: u32 = 2;
+
+unsafe fn apply_window_corner_preference(hwnd: HWND) {
+    let preference: u32 = DWMWCP_ROUND;
+    DwmSetWindowAttribute(
+        hwnd,
+        DWMWA_WINDOW_CORNER_PREFERENCE,
+        &preference as *const u32 as *const _,
+        mem::size_of::<u32>() as u32,
+    );
+}
+
+
+
 /// Gère les commandes.
 ///
 /// # Arguments
@@ -83,6 +100,9 @@ pub extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: L
                 );
                 init_theme(is_dark_mode_enabled());
                 SetTimer(hwnd, info::get_timer_id(), info::get_timer_interval(), None);
+
+                // Appliquer les coins arrondis
+                apply_window_corner_preference(hwnd);
 
                 // Démarrer un thread en arrière-plan pour des mises à jour périodiques
                 let running = Arc::new(AtomicBool::new(true));
@@ -166,7 +186,10 @@ pub extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: L
             WM_NCCALCSIZE => {
                 if wparam == 1 {
                     let params = &mut *(lparam as *mut NCCALCSIZE_PARAMS);
-                    params.rgrc[0].top -= 1;
+                    params.rgrc[0].top;
+                    params.rgrc[0].left;
+                    params.rgrc[0].right;
+                    params.rgrc[0].bottom;
                     return 0;
                 }
                 DefWindowProcW(hwnd, msg, wparam, lparam)
@@ -224,3 +247,4 @@ pub extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: L
         }
     }
 }
+
