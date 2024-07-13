@@ -1,5 +1,3 @@
-// src/windows/create.rs
-
 use std::collections::HashMap;
 use std::ptr::null_mut;
 use std::sync::Mutex;
@@ -9,16 +7,20 @@ use winapi::um::winuser::*;
 use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::shared::minwindef::{UINT, WPARAM, LPARAM, LRESULT};
 use std::os::windows::ffi::OsStrExt;
-use crate::windows::Window;
+use crate::windows::{Window, WindowState, WindowHandle};
+use winapi::um::dwmapi::DwmSetWindowAttribute;
+
+const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+const DWMWCP_ROUND: u32 = 2;
 
 lazy_static! {
-    static ref WINDOWS: Mutex<HashMap<u32, Window>> = Mutex::new(HashMap::new());
+    pub static ref WINDOWS: Mutex<HashMap<WindowHandle, Window>> = Mutex::new(HashMap::new());
 }
 
-pub fn create_window(id: u32, title: &str, width: u32, height: u32, x: i32, y: i32) -> HWND {
+pub fn create_window(title: &str, width: u32, height: u32, x: i32, y: i32) -> HWND {
     unsafe {
         let h_instance = GetModuleHandleW(null_mut());
-        let class_name = to_wstring("window");
+        let class_name = to_wstring("popup");
 
         let wc = WNDCLASSW {
             style: CS_HREDRAW | CS_VREDRAW,
@@ -36,10 +38,10 @@ pub fn create_window(id: u32, title: &str, width: u32, height: u32, x: i32, y: i
         RegisterClassW(&wc);
 
         let hwnd = CreateWindowExW(
-            0,
+            WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
             class_name.as_ptr(),
             to_wstring(title).as_ptr(),
-            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+            WS_POPUP | WS_VISIBLE,
             x,
             y,
             width as i32,
@@ -50,15 +52,21 @@ pub fn create_window(id: u32, title: &str, width: u32, height: u32, x: i32, y: i
             null_mut(),
         );
 
-        WINDOWS.lock().unwrap().insert(id, Window {
-            id,
+        apply_window_corner_preference(hwnd);
+
+        let hdc = GetDC(hwnd);
+
+        let handle = WindowHandle { hwnd, hdc };
+
+        WINDOWS.lock().unwrap().insert(handle, Window {
+            handle,
             title: title.to_string(),
             width,
             height,
             x,
             y,
-            is_maximized: false,
-            is_minimized: false,
+            state: WindowState::Restored,
+            is_active: true,
         });
 
         hwnd
@@ -78,5 +86,17 @@ extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARA
             },
             _ => DefWindowProcW(hwnd, msg, wparam, lparam),
         }
+    }
+}
+
+fn apply_window_corner_preference(hwnd: HWND) {
+    unsafe {
+        let preference = DWMWCP_ROUND;
+        DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            &preference as *const _ as *const _,
+            std::mem::size_of::<u32>() as u32,
+        );
     }
 }

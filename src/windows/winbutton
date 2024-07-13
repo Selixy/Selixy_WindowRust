@@ -1,0 +1,287 @@
+// src/windows/winbuttons.rs
+
+extern crate winapi;
+extern crate widestring;
+
+use winapi::shared::windef::{HDC, RECT};
+use winapi::um::wingdi::{CreateSolidBrush, RGB, DeleteObject, SelectObject, SetTextColor, SetBkMode, CreateFontW, TextOutW, CreateCompatibleDC, CreateCompatibleBitmap, BitBlt, SRCCOPY};
+use winapi::um::winuser::{FillRect, ReleaseDC};
+use widestring::U16CString;
+
+use crate::windows::create::WINDOWS;
+use crate::color::theme::{ThemeColors, Rgb, get_theme_colors};
+use crate::windows::{Window, WindowState};
+
+// Declaration des variables statiques 
+pub const TITLE_BAR_HEIGHT: i32 = 30;
+pub const BUTTON_WIDTH: i32 = 50;
+
+
+// Déclaration des variables statiques pour les facteurs de survol des boutons
+static mut EXIT_FACT : f32 = 0.0;
+static mut MAXIM_FACT: f32 = 0.0;
+static mut MINIM_FACT: f32 = 0.0;
+
+// Déclaration des variables statiques pour l'état de survol des boutons
+static mut EXIT_OVER : bool = false;
+static mut MAXIM_OVER: bool = false;
+static mut MINIM_OVER: bool = false;
+
+// Déclaration de la variable statique pour arrêter le dessin
+static mut STOP: bool = false;
+
+// Déclaration des icônes pour les boutons
+const EXIT_ICON:  char = '\u{E8BB}'; // Icône pour fermer
+const MAXIM_ICON: char = '\u{E922}'; // Icône pour maximiser
+const MINIM_ICON: char = '\u{E921}'; // Icône pour minimiser
+const REST_ICON:  char = '\u{E923}'; // Icône pour restaurer
+
+/// Réinitialise les états de survol des boutons.
+pub fn reset_bools() {
+    unsafe {
+        EXIT_OVER  = false;
+        MAXIM_OVER = false;
+        MINIM_OVER = false;
+    }
+}
+
+/// Active l'état de survol du bouton de sortie.
+pub fn activ_exit_over() {
+    unsafe {
+        EXIT_OVER = true;
+    }
+}
+
+/// Active l'état de survol du bouton de maximisation.
+pub fn activ_maxim_over() {
+    unsafe {
+        MAXIM_OVER = true;
+    }
+}
+
+/// Active l'état de survol du bouton de minimisation.
+pub fn activ_minim_over() {
+    unsafe {
+        MINIM_OVER = true;
+    }
+}
+
+/// Effectue l'interpolation linéaire entre deux valeurs avec clamping.
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + t * (b - a)
+}
+
+/// Effectue l'interpolation linéaire entre deux couleurs avec clamping du facteur entre 0 et 1.
+fn lerp_color(color1: &Rgb, color2: &Rgb, t: f32) -> Rgb {
+    let clamped_t = t.clamp(0.0, 1.0);
+    Rgb(
+        lerp(color1.0 as f32, color2.0 as f32, clamped_t) as u8,
+        lerp(color1.1 as f32, color2.1 as f32, clamped_t) as u8,
+        lerp(color1.2 as f32, color2.2 as f32, clamped_t) as u8,
+    )
+}
+
+
+/// Dessine un carré de couleur spécifiée à la position donnée.
+fn button_overl(hdc: HDC, color: Rgb, position: (i32, i32)) {
+
+    let (x, y) = position;
+    let (r, g, b) = (color.0, color.1, color.2);
+
+    let rect = RECT {
+        left: x,
+        top: y,
+        right: x + BUTTON_WIDTH,
+        bottom: y + TITLE_BAR_HEIGHT,
+    };
+
+    unsafe {
+        let hbrush = CreateSolidBrush(RGB(r, g, b));
+        FillRect(hdc, &rect, hbrush);
+        DeleteObject(hbrush as _);
+    }
+}
+
+/// Dessine une icône sur un bouton.
+fn draw_icon(hdc: HDC, factor: f32, position: (i32, i32), icon: char, theme_colors: &ThemeColors) {
+    let button_iconselect = if icon != EXIT_ICON { 
+        &theme_colors.button_iconselect
+    } else {
+        &Rgb(255, 255, 255)
+    };
+
+    let blended_color = lerp_color(&theme_colors.button_icon, button_iconselect, factor);
+    let (r, g, b) = (blended_color.0, blended_color.1, blended_color.2);
+
+    let icon_size = 11;
+
+    let icon_position = (
+        position.0 + (BUTTON_WIDTH - icon_size) / 2,
+        position.1 + (TITLE_BAR_HEIGHT - icon_size) / 2,
+    );
+
+    let hfont = unsafe {
+        CreateFontW(
+            icon_size, 0, 0, 0, 400, 0, 0, 0,
+            winapi::um::wingdi::DEFAULT_CHARSET,
+            winapi::um::wingdi::OUT_DEFAULT_PRECIS,
+            winapi::um::wingdi::CLIP_DEFAULT_PRECIS,
+            winapi::um::wingdi::DEFAULT_QUALITY,
+            winapi::um::wingdi::FF_DONTCARE | winapi::um::wingdi::DEFAULT_PITCH,
+            U16CString::from_str("Segoe MDL2 Assets").unwrap().as_ptr(),
+        )
+    };
+
+    unsafe {
+        SelectObject(hdc, hfont as _);
+        SetTextColor(hdc, RGB(r, g, b));
+        SetBkMode(hdc, winapi::um::wingdi::TRANSPARENT as i32);
+
+        let icon_utf16: Vec<u16> = U16CString::from_str(&icon.to_string()).unwrap().into_vec();
+        TextOutW(hdc, icon_position.0, icon_position.1, icon_utf16.as_ptr(), icon_utf16.len() as i32);
+
+        DeleteObject(hfont as _);
+    }
+}
+
+/// Dessine les trois icônes des boutons.
+fn draw_three_icons(hdc: HDC, theme_colors: &ThemeColors, window: &Window) {
+    unsafe {
+        let minim_position = (window.width as i32 - BUTTON_WIDTH * 3, 0);
+        let maxim_position = (window.width as i32 - BUTTON_WIDTH * 2, 0);
+        let exit_position = (window.width as i32 - BUTTON_WIDTH, 0);
+
+        let max_rest = if window.state == WindowState::Maximized {
+            REST_ICON
+        } else {
+            MAXIM_ICON
+        };
+
+        if window.is_active {
+            draw_icon(hdc, EXIT_FACT + 0.8, exit_position, EXIT_ICON, theme_colors);
+            draw_icon(hdc, MAXIM_FACT + 0.8, maxim_position, max_rest, theme_colors);
+            draw_icon(hdc, MINIM_FACT + 0.8, minim_position, MINIM_ICON, theme_colors);
+        } else {
+            draw_icon(hdc, EXIT_FACT, exit_position, EXIT_ICON, theme_colors);
+            draw_icon(hdc, MAXIM_FACT, maxim_position, max_rest, theme_colors);
+            draw_icon(hdc, MINIM_FACT, minim_position, MINIM_ICON, theme_colors);
+        }
+    }
+}
+
+
+/// Dessine trois boutons en utilisant la fonction button_overl.
+fn draw_three_buttons(hdc: HDC, theme_colors: &ThemeColors, window: &Window) {
+    unsafe {
+        let background_color = &theme_colors.background;
+
+        let exit_color = &Rgb(232, 17, 35);
+        let maxim_color = &Rgb(200, 200, 200);
+        let minim_color = &Rgb(200, 200, 200);
+
+        let alpha_minimaxi = 0.4;
+
+        let blended_exit_color = lerp_color(background_color, exit_color, EXIT_FACT);
+        let blended_maxim_color = lerp_color(background_color, maxim_color, MAXIM_FACT * alpha_minimaxi);
+        let blended_minim_color = lerp_color(background_color, minim_color, MINIM_FACT * alpha_minimaxi);
+
+        let minim_position = (window.width as i32 - BUTTON_WIDTH * 3, 0);
+        let maxim_position = (window.width as i32 - BUTTON_WIDTH * 2, 0);
+        let exit_position = (window.width as i32 - BUTTON_WIDTH, 0);
+
+        button_overl(hdc, blended_exit_color, minim_position);
+        button_overl(hdc, blended_maxim_color, maxim_position);
+        button_overl(hdc, blended_minim_color, exit_position);
+
+        draw_three_icons(hdc, theme_colors, window);
+    }
+}
+
+
+
+
+
+
+/// Gère les boutons de la fenêtre.
+pub fn windows_buttons() {
+    let windows = WINDOWS.lock().unwrap();
+    for window in windows.values() {
+        let hwnd = window.handle.hwnd;
+        let hdc = window.handle.hdc;
+        let window_width = window.width as i32;
+        let title_bar_height = TITLE_BAR_HEIGHT;
+        let button_width = BUTTON_WIDTH;
+
+        if hdc.is_null() {
+            return;
+        }
+
+        // Créer un DC compatible en mémoire
+        let mem_dc = unsafe { CreateCompatibleDC(hdc) };
+        if mem_dc.is_null() {
+            unsafe { ReleaseDC(hwnd, hdc) };
+            return;
+        }
+
+        // Créer un bitmap compatible en mémoire
+        let mem_bitmap = unsafe { CreateCompatibleBitmap(hdc, window_width, title_bar_height) };
+        if mem_bitmap.is_null() {
+            unsafe {
+                DeleteObject(mem_dc as _);
+                ReleaseDC(hwnd, hdc);
+            }
+            return;
+        }
+
+        // Sélectionner le bitmap dans le DC compatible
+        unsafe { SelectObject(mem_dc, mem_bitmap as _) };
+
+        // Dessiner les boutons et les icônes sur le DC compatible
+        let theme_colors = get_theme_colors();
+        draw_three_buttons(mem_dc, &theme_colors, window);
+
+        // Transférer le contenu du DC compatible à l'écran
+        unsafe {
+            BitBlt(hdc, window_width - button_width * 3, 0, button_width * 3, title_bar_height, mem_dc, window_width - button_width * 3, 0, SRCCOPY);
+            DeleteObject(mem_bitmap as _);
+            DeleteObject(mem_dc as _);
+            ReleaseDC(hwnd, hdc);
+        }
+    }
+
+    unsafe {
+        let mut spid = 0.128;
+        for window in windows.values() {
+            if window.is_active {
+                spid = 0.032;
+            }
+        }
+
+        if EXIT_OVER {
+            STOP = false;
+            MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
+            MINIM_FACT = (MINIM_FACT - spid).max(0.0);
+            EXIT_FACT = (EXIT_FACT + spid).min(1.0);
+        } else if MAXIM_OVER {
+            STOP = false;
+            MINIM_FACT = (MINIM_FACT - spid).max(0.0);
+            EXIT_FACT = (EXIT_FACT - spid).max(0.0);
+            MAXIM_FACT = (MAXIM_FACT + spid).min(1.0);
+        } else if MINIM_OVER {
+            STOP = false;
+            EXIT_FACT = (EXIT_FACT - spid).max(0.0);
+            MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
+            MINIM_FACT = (MINIM_FACT + spid).min(1.0);
+        } else {
+            EXIT_FACT = (EXIT_FACT - spid).max(0.0);
+            MAXIM_FACT = (MAXIM_FACT - spid).max(0.0);
+            MINIM_FACT = (MINIM_FACT - spid).max(0.0);
+        }
+
+        if !STOP {
+            if MINIM_FACT + MAXIM_FACT + EXIT_FACT <= 0.0 {
+                STOP = true;
+            }
+        }
+    }
+}

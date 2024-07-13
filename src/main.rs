@@ -1,11 +1,13 @@
 // src/main.rs
 
-mod windows;
+mod windows; // Importation du module `windows`
+mod color; // Importation du module `color`
 
-use windows::create::create_window;
+use windows::create::create_window; // Importation de la fonction `create_window`
 
 fn main() {
-    let hwnd = create_window(1, "Ma Fenêtre", 800, 600, 100, 100);
+    // Création de la fenêtre avec des dimensions et une position spécifiques
+    let hwnd = create_window("Ma Fenêtre", 800, 600, 100, 100);
     println!("Fenêtre créée avec HWND: {:?}", hwnd);
 
     // Boucle de messages pour garder la fenêtre ouverte
