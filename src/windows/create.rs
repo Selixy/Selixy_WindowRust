@@ -1,3 +1,5 @@
+// src/windows/create.rs
+
 use std::collections::HashMap;
 use std::ptr::null_mut;
 use std::sync::Mutex;
@@ -5,15 +7,16 @@ use lazy_static::lazy_static;
 use winapi::shared::windef::{HWND, HBRUSH};
 use winapi::um::winuser::*;
 use winapi::um::libloaderapi::GetModuleHandleW;
-use winapi::shared::minwindef::{UINT, WPARAM, LPARAM, LRESULT};
 use std::os::windows::ffi::OsStrExt;
 use crate::windows::{Window, WindowState, WindowHandle};
 use winapi::um::dwmapi::DwmSetWindowAttribute;
+use crate::windows::message::wnd_proc;
 
 const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
 const DWMWCP_ROUND: u32 = 2;
 
 lazy_static! {
+    // Déclaration d'une HashMap protégée par un Mutex pour stocker les fenêtres
     pub static ref WINDOWS: Mutex<HashMap<WindowHandle, Window>> = Mutex::new(HashMap::new());
 }
 
@@ -73,22 +76,12 @@ pub fn create_window(title: &str, width: u32, height: u32, x: i32, y: i32) -> HW
     }
 }
 
+// Conversion de chaîne en widestring
 fn to_wstring(str: &str) -> Vec<u16> {
     std::ffi::OsString::from(str).encode_wide().chain(Some(0).into_iter()).collect()
 }
 
-extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    unsafe {
-        match msg {
-            WM_DESTROY => {
-                PostQuitMessage(0);
-                0
-            },
-            _ => DefWindowProcW(hwnd, msg, wparam, lparam),
-        }
-    }
-}
-
+// Application des préférences de coin de fenêtre arrondie
 fn apply_window_corner_preference(hwnd: HWND) {
     unsafe {
         let preference = DWMWCP_ROUND;

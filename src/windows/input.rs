@@ -5,8 +5,8 @@ use winapi::shared::minwindef::{LPARAM, LRESULT};
 use winapi::um::winuser::*;
 use std::mem;
 
-use crate::windows::winbuttons::constants::{TITLE_BAR_HEIGHT, BUTTON_WIDTH};
-use crate::windows::winbuttons::state::{reset_bools, activ_exit_over, activ_maxim_over, activ_minim_over};
+use crate::windows::winbuttons::constants::{BUTTON_WIDTH, TITLE_BAR_HEIGHT};
+use crate::windows::winbuttons::state::{reset_bools, activate_button_hover};
 
 const BORDER_WIDTH: i32 = 10;
 
@@ -59,15 +59,15 @@ pub unsafe fn handle_nchittest(hwnd: HWND, lparam: LPARAM) -> LRESULT {
     } else if y >= rect.top && y < rect.top + TITLE_BAR_HEIGHT {
         if x >= rect.right - BUTTON_WIDTH && x < rect.right {
             reset_bools();
-            activ_exit_over();
+            activate_button_hover("exit");
             return HTCLOSE as LRESULT;
         } else if x >= rect.right - BUTTON_WIDTH * 2 && x < rect.right - BUTTON_WIDTH {
             reset_bools();
-            activ_maxim_over();
+            activate_button_hover("maximize");
             return HTMAXBUTTON as LRESULT;
         } else if x >= rect.right - BUTTON_WIDTH * 3 && x < rect.right - BUTTON_WIDTH * 2 {
             reset_bools();
-            activ_minim_over();
+            activate_button_hover("minimize");
             return HTMINBUTTON as LRESULT;
         } else {
             reset_bools();

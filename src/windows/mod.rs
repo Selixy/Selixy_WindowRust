@@ -3,6 +3,12 @@
 pub mod create;
 pub mod input;
 pub mod winbuttons;
+pub mod message;
+pub mod draw;
+pub mod responsive;
+pub mod register;
+pub mod event_tick;
+pub mod utils;
 
 use winapi::shared::windef::{HWND, HDC};
 use std::hash::{Hash, Hasher};

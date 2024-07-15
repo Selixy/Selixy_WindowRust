@@ -16,14 +16,23 @@ pub fn reset_bools() {
     MINIM_OVER.store(false, Ordering::SeqCst);
 }
 
-pub fn activ_exit_over() {
+fn activ_exit_over() {
     EXIT_OVER.store(true, Ordering::SeqCst);
 }
 
-pub fn activ_maxim_over() {
+fn activ_maxim_over() {
     MAXIM_OVER.store(true, Ordering::SeqCst);
 }
 
-pub fn activ_minim_over() {
+fn activ_minim_over() {
     MINIM_OVER.store(true, Ordering::SeqCst);
+}
+
+pub fn activate_button_hover(button: &str) {
+    match button {
+        "exit" => activ_exit_over(),
+        "maxim" => activ_maxim_over(),
+        "minim" => activ_minim_over(),
+        _ => (),
+    }
 }
