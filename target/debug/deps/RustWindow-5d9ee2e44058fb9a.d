@@ -1,0 +1,8 @@
+M:\0-Dev-USD\Rust\RustWindow\target\debug\deps\libRustWindow-5d9ee2e44058fb9a.rmeta: src\main.rs src\windows\mod.rs src\windows\create.rs src\color\mod.rs
+
+M:\0-Dev-USD\Rust\RustWindow\target\debug\deps\RustWindow-5d9ee2e44058fb9a.d: src\main.rs src\windows\mod.rs src\windows\create.rs src\color\mod.rs
+
+src\main.rs:
+src\windows\mod.rs:
+src\windows\create.rs:
+src\color\mod.rs:
